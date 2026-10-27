@@ -189,8 +189,50 @@
         };
     }
 
+
+    // Implementación VLSM completa; se conserva la función inicial como referencia.
+    function subnetearVLSMCompleto(ip, prefijo, requerimientos){
+        const base = validarRedBase(ip, prefijo);
+        const fin = base + 2**(32-prefijo);
+        if(!Array.isArray(requerimientos) || requerimientos.length === 0){
+            throw new Error('Agrega al menos una subred');
+        }
+
+        const ordenados = requerimientos
+        .map((r, i) => ({...r, hosts: Number(r.hosts), i}))
+        .sort((a,b) => b.hosts - a.hosts || a.i - b.i);
+
+        let siguiente = base;
+        const subredes = ordenados.map((r) => {
+            const bitsHosts = bitsParaHosts(r.hosts);
+            const nuevoPrefijo = 32 - bitsHosts;
+            if(nuevoPrefijo < prefijo){
+                throw new Error(`${r.nombre || 'La subred'} (${r.hosts} hosts) necesita /${nuevoPrefijo}, más grande que toda la red`);
+            }
+
+            const tamano = 2**bitsHosts;
+            const inicio = Math.ceil(siguiente / tamano) * tamano;
+            if(inicio + tamano > fin){
+                throw new Error(`No hay espacio suficiente para asignar ${r.nombre || 'la subred'} (${r.hosts} hosts)`);
+            }
+
+            siguiente = inicio + tamano;
+            const subred = describirSubred(inicio, nuevoPrefijo, r.nombre);
+            subred.broadcast = enteroAIp(inicio + tamano - 1);
+            return {...subred, hostsSolicitados: r.hosts, bitsHosts};
+        });
+
+        const usadas = siguiente - base;
+        return{
+            subredes,
+            direccionesTotales: 2**(32-prefijo),
+            direccionesUsadas: usadas,
+            direccionesLibres: fin - siguiente,
+            primerLibre: siguiente < fin ? enteroAIp(siguiente) : null
+        };
+    }
     const api = {
-        octetoABinario, pasosDecimalABinario, ipABinario, ipAEntero, enteroAIp, prefijoAMascara, mascaraAPrefijo, leerPrefijo, claseDeRed, esPrivada, hostsUtilizable, bitsParaHosts, analizarIp, subnetearFLSM, subnetearVLSM
+        octetoABinario, pasosDecimalABinario, ipABinario, ipAEntero, enteroAIp, prefijoAMascara, mascaraAPrefijo, leerPrefijo, claseDeRed, esPrivada, hostsUtilizable, bitsParaHosts, analizarIp, subnetearFLSM, subnetearVLSM: subnetearVLSMCompleto
     };
 
     //este ultimo es hacer este script como modulo o libreria propia

@@ -4,6 +4,11 @@
   'use strict';
   const S = window.Subneteo;
   const $ = (id) => document.getElementById(id);
+  // El formulario del HTML comparte el id del campo; lo renombramos para enlazar ambos controles.
+  const formularioBinario = $('bin-entrada');
+  if (!$('form-binario') && formularioBinario && formularioBinario.tagName === 'FORM') {
+    formularioBinario.id = 'form-binario';
+  }
 
   // Evita que un nombre escrito por el usuario se interprete como HTML
   function escapar(texto) {
@@ -139,7 +144,34 @@
     }
   });
 
-  // ---------- VLSM ----------Tarea
+  // ---------- VLSM ----------
+
+  $('form-vlsm').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const destino = $('vlsm-resultado');
+    try {
+      const ip = $('vlsm-red').value.trim();
+      const prefijo = S.leerPrefijo($('vlsm-prefijo').value);
+      const requerimientos = Array.from(document.querySelectorAll('.req-fila')).map((fila) => ({
+        nombre: fila.querySelector('.vlsm-nombre').value.trim(),
+        hosts: Number(fila.querySelector('.vlsm-hosts').value),
+      }));
+      const r = S.subnetearVLSM(ip, prefijo, requerimientos);
+      destino.innerHTML = tarjetaRedBase(ip, prefijo) + `
+        <div class="tarjeta">
+          <h3>Resultado VLSM</h3>
+          <dl class="datos">
+            <div><dt>Direcciones totales</dt><dd>${formatoMiles(r.direccionesTotales)}</dd></div>
+            <div><dt>Direcciones asignadas</dt><dd>${formatoMiles(r.direccionesUsadas)}</dd></div>
+            <div><dt>Direcciones libres</dt><dd>${formatoMiles(r.direccionesLibres)}</dd></div>
+            <div><dt>Primera dirección libre</dt><dd>${r.primerLibre || 'Ninguna'}</dd></div>
+          </dl>
+        </div>
+        <div class="tarjeta">${tablaSubredes(r.subredes, true)}</div>`;
+    } catch (err) {
+      mostrarError(destino, err);
+    }
+  });
 
   // ---------- ¿A qué red pertenece? ----------
 
@@ -198,6 +230,18 @@
     },
   };
 
+  function agregarFila(nombre = '', hosts = 1) {
+    const fila = document.createElement('div');
+    fila.className = 'req-fila';
+    fila.innerHTML = `
+      <input type="text" class="vlsm-nombre" placeholder="Nombre de la subred" value="${escapar(nombre)}">
+      <input type="number" class="vlsm-hosts" min="1" value="${Number(hosts)}">
+      <button type="button" class="quitar" title="Quitar subred" aria-label="Quitar subred">×</button>`;
+    fila.querySelector('.quitar').addEventListener('click', () => fila.remove());
+    $('vlsm-filas').appendChild(fila);
+  }
+
+  $('vlsn-agregar').addEventListener('click', () => agregarFila());
   function cargarFilas(lista) {
     $('vlsm-filas').innerHTML = '';
     lista.forEach(([nombre, hosts]) => agregarFila(nombre, hosts));
