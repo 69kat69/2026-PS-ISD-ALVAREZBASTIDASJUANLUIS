@@ -4,12 +4,6 @@
   'use strict';
   const S = window.Subneteo;
   const $ = (id) => document.getElementById(id);
-  // El formulario del HTML comparte el id del campo; lo renombramos para enlazar ambos controles.
-  const formularioBinario = $('bin-entrada');
-  if (!$('form-binario') && formularioBinario && formularioBinario.tagName === 'FORM') {
-    formularioBinario.id = 'form-binario';
-  }
-
   // Evita que un nombre escrito por el usuario se interprete como HTML
   function escapar(texto) {
     return String(texto).replace(/[&<>"']/g, (c) => ({
@@ -134,7 +128,7 @@
           <dl class="datos">
             <div><dt>Bits prestados</dt><dd>${r.bitsPrestados} (2^${r.bitsPrestados} = ${r.totalSubredes} subredes)</dd></div>
             <div><dt>Nuevo prefijo</dt><dd>/${r.nuevoPrefijo} · ${S.prefijoAMascara(r.nuevoPrefijo)}</dd></div>
-            <div><dt>Hosts útiles por subred</dt><dd>2^${32 - r.nuevoPrefijo} − 2 = ${formatoMiles(r.hostsPorSubred)}</dd></div>
+            <div><dt>Hosts útiles por subred</dt><dd>2^${32 - r.nuevoPrefijo} − 2 = ${formatoMiles(r.hostPorSubred)}</dd></div>
             <div><dt>Salto entre subredes</dt><dd>${formatoMiles(r.subredes[0].tamanoBloque)} direcciones</dd></div>
           </dl>
         </div>
@@ -153,16 +147,20 @@
       const ip = $('vlsm-red').value.trim();
       const prefijo = S.leerPrefijo($('vlsm-prefijo').value);
       const requerimientos = Array.from(document.querySelectorAll('.req-fila')).map((fila) => ({
-        nombre: fila.querySelector('.vlsm-nombre').value.trim(),
+        nombre: fila.querySelector('.vlsm-nombre').value.trim() || 'Subred',
         hosts: Number(fila.querySelector('.vlsm-hosts').value),
-      }));
+      })).filter((r) => r.hosts > 0);
+      if (requerimientos.length === 0) {
+        throw new Error('Agrega al menos una subred con número de hosts válido');
+      }
       const r = S.subnetearVLSM(ip, prefijo, requerimientos);
+      const porcentaje = Math.round((r.direccionesUsadas / r.direccionesTotales) * 100);
       destino.innerHTML = tarjetaRedBase(ip, prefijo) + `
         <div class="tarjeta">
-          <h3>Resultado VLSM</h3>
+          <h3>Resumen de ocupación</h3>
           <dl class="datos">
             <div><dt>Direcciones totales</dt><dd>${formatoMiles(r.direccionesTotales)}</dd></div>
-            <div><dt>Direcciones asignadas</dt><dd>${formatoMiles(r.direccionesUsadas)}</dd></div>
+            <div><dt>Direcciones asignadas</dt><dd>${formatoMiles(r.direccionesUsadas)} (${porcentaje}%)</dd></div>
             <div><dt>Direcciones libres</dt><dd>${formatoMiles(r.direccionesLibres)}</dd></div>
             <div><dt>Primera dirección libre</dt><dd>${r.primerLibre || 'Ninguna'}</dd></div>
           </dl>
@@ -204,21 +202,11 @@
   // ---------- Ejercicios de la hoja ----------
 
   const ejercicios = {
-    1: () => {
-      $('vlsm-red').value = '192.168.50.0';
-      $('vlsm-prefijo').value = '/24';
-      cargarFilas([['Laboratorio de Cómputo', 60], ['Sala de Maestros', 25], ['Control Escolar', 12],
-        ['Biblioteca', 5], ['Enlace R1-R2', 2], ['Enlace R2-R3', 2]]);
-      activarPanel('panel-vlsm');
-      $('form-vlsm').requestSubmit();
-    },
-    2: () => {
-      $('vlsm-red').value = '172.20.0.0';
-      $('vlsm-prefijo').value = '/16';
-      cargarFilas([['Campus Norte', 2000], ['Campus Sur', 1000], ['Administración', 500],
-        ['WiFi Visitantes', 200], ['Enlace Norte-Sur', 2]]);
-      activarPanel('panel-vlsm');
-      $('form-vlsm').requestSubmit();
+    0: () => {
+      $('vlsm-red').value = '';
+      $('vlsm-prefijo').value = '';
+      cargarFilas([]);
+      $('vlsm-resultado').innerHTML = '';
     },
     3: () => {
       $('flsm-red').value = '10.0.0.0';
@@ -230,18 +218,18 @@
     },
   };
 
-  function agregarFila(nombre = '', hosts = 1) {
+  function agregarFila(nombre = '', hosts = '') {
     const fila = document.createElement('div');
     fila.className = 'req-fila';
     fila.innerHTML = `
       <input type="text" class="vlsm-nombre" placeholder="Nombre de la subred" value="${escapar(nombre)}">
-      <input type="number" class="vlsm-hosts" min="1" value="${Number(hosts)}">
+      <input type="number" class="vlsm-hosts" min="1" value="${hosts}">
       <button type="button" class="quitar" title="Quitar subred" aria-label="Quitar subred">×</button>`;
     fila.querySelector('.quitar').addEventListener('click', () => fila.remove());
     $('vlsm-filas').appendChild(fila);
   }
 
-  $('vlsn-agregar').addEventListener('click', () => agregarFila());
+  $('vlsm-agregar').addEventListener('click', () => agregarFila());
   function cargarFilas(lista) {
     $('vlsm-filas').innerHTML = '';
     lista.forEach(([nombre, hosts]) => agregarFila(nombre, hosts));
@@ -251,12 +239,21 @@
     b.addEventListener('click', () => ejercicios[b.dataset.ejemplo]());
   });
 
-  // Estado inicial: filas del ejercicio 1 y conversión de ejemplo
-  cargarFilas([['Laboratorio de Cómputo', 60], ['Sala de Maestros', 25], ['Control Escolar', 12],
-    ['Biblioteca', 5], ['Enlace R1-R2', 2], ['Enlace R2-R3', 2]]);
+  // Estado inicial: filas de ejemplo y conversión inicial
+  cargarFilas([['Laboratorio ', 60], ['Sala de juntas', 25], ['Gestion escolar', 12],
+    ['ciberbatiz', 5], ['Enlace R1-R2', 2], ['Enlace R2-R3', 2]]);
   $('form-binario').requestSubmit();
 
-  // index.html#ejercicio=2 abre directamente ese ejercicio (útil para proyectar en clase)
+  // index.html#ejercicio=3 abre directamente ese ejercicio (útil para proyectar en clase)
   const enlace = location.hash.match(/ejercicio=(\d)/);
   if (enlace && ejercicios[enlace[1]]) ejercicios[enlace[1]]();
 })();
+
+
+
+
+
+
+
+
+

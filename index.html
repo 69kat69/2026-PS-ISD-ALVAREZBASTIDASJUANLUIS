@@ -1,38 +1,47 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=>, initial-scale=1.0">
-    <title>Document</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Portafolio de evidencias | Juan Luis Álvarez Bastidas</title>
+    <style>
+        :root { color-scheme: light; --acento: #128a4a; --borde: #d8e0dc; --fondo: #f4f7f5; }
+        * { box-sizing: border-box; }
+        body { margin: 0; padding: 32px 16px; font: 16px/1.5 "Segoe UI", system-ui, sans-serif; color: #1c2321; background: var(--fondo); }
+        main { max-width: 1000px; margin: auto; }
+        h1 { margin-top: 0; }
+        .tabla { overflow-x: auto; margin-top: 24px; padding: 20px; background: white; border: 1px solid var(--borde); border-radius: 10px; }
+        table { width: 100%; border-collapse: collapse; }
+        caption { padding-bottom: 12px; text-align: left; font-size: 1.15rem; font-weight: 700; }
+        th, td { padding: 10px 12px; text-align: left; border-bottom: 1px solid var(--borde); }
+        th { background: #e3f5ea; }
+        a { color: #08763d; font-weight: 600; }
+    </style>
 </head>
 <body>
-    <div class="container">
-        <div class="content">
-            <div class="titulo">
-                <h1>Portafolio de Evidencias de Alvarez Bastidas Juan Luis</h1>
-                <p>Este es el indice para colocar cada uno de los trabajos que se realizaran en las asignaturas de pruebas de software e introduccion a los sistemas distribuidos</p>
-            </div>
-            <div class="tablas">
-                <table class="tablaps">
-                    <thead>
-                        <tr>
-                            <th>Ejercicio</th>
-                            <th>Descripcion</th>
-                            <th>Enlace</th>
-                        </tr>
-                    </thead>
-                </table>
-                <table class="tabisd">
-                    <thead>
-                        <tr>
-                            <th>Ejercicio</th>
-                            <th>Descripcion</th>
-                            <th>Enlace</th>
-                        </tr>
-                    </thead>
-                </table>
-            </div>
-        </div>
-    </div>
+    <main>
+        <h1>Portafolio de evidencias de Juan Luis Álvarez Bastidas</h1>
+        <p>Trabajos de las asignaturas de Pruebas de Software e Introducción a los Sistemas Distribuidos.</p>
+        <section class="tabla">
+            <table class="tablaps">
+                <caption>Pruebas de Software</caption>
+                <thead><tr><th>Ejercicio</th><th>Descripción</th><th>Enlace</th></tr></thead>
+                <tbody><tr><td colspan="3">Aún no hay trabajos publicados.</td></tr></tbody>
+            </table>
+        </section>
+        <section class="tabla">
+            <table class="tabisd">
+                <caption>Introducción a los Sistemas Distribuidos</caption>
+                <thead><tr><th>Ejercicio</th><th>Descripción</th><th>Enlace</th></tr></thead>
+                <tbody>
+                    <tr>
+                        <td>Subneteo IPv4</td>
+                        <td>Calculadora de conversión binaria, FLSM, VLSM y análisis de redes.</td>
+                        <td><a href="./segundparcial/subneteo/index.html">Abrir página</a></td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+    </main>
 </body>
 </html>

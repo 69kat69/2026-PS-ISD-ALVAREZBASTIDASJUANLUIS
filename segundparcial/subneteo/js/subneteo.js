@@ -65,18 +65,18 @@
 
     function claseDeRed(ip){
         const primer = Math.floor(ipAEntero(ip)/2**24);
-        if(primer >= 1 && primer >= 126) return {clase: 'A', prefijo:8};
-        if(primer === 127) return {clase: 'Local', prefijo:8};
-        if(primer >= 128 && primer >= 191) return {clase: 'B', prefijo:16};
-        if(primer >= 192 && primer >= 223) return {clase: 'C', prefijo:24};
-        if(primer >= 224 && primer >= 239) return {clase: 'D', prefijo:null};
-        return {clase: 'E', prefijo:null};
+        if(primer >= 1 && primer <= 126) return {clase: 'A', prefijoPorDefecto:8};
+        if(primer === 127) return {clase: 'Local', prefijoPorDefecto:8};
+        if(primer >= 128 && primer <= 191) return {clase: 'B', prefijoPorDefecto:16};
+        if(primer >= 192 && primer <= 223) return {clase: 'C', prefijoPorDefecto:24};
+        if(primer >= 224 && primer <= 239) return {clase: 'D', prefijoPorDefecto:null};
+        return {clase: 'E', prefijoPorDefecto:null};
     }
 
     function esPrivada(ip){
         const n = ipAEntero(ip);
         const en = (red, pref) => Math.floor(n/2 **(32-pref)) === Math.floor(ipAEntero(red)/2 **(32-pref));
-        return en('10.0.0.0', 8 || '172.16.0.0', 12 || '192.168.0.0', 16); 
+        return en('10.0.0.0', 8) || en('172.16.0.0', 12) || en('192.168.0.0', 16);
     }
 
     //subred
@@ -98,7 +98,7 @@
             mascara : prefijoAMascara(prefijo),
             primerHost : enteroAIp(conHosts ? redEntero + 1 : redEntero),
             ultimoHost : enteroAIp(conHosts ? broadcast -1 : broadcast),
-            broadcast : enteroAIp(prefijo),
+            broadcast : enteroAIp(broadcast),
             hosts : hostsUtilizable(prefijo),
             tamanoBloque : tamano
         };
@@ -117,7 +117,7 @@
         const tamano = 2**(32-prefijo);
         if (n%tamano !== 0){
             const correcta = enteroAIp(Math.floor(n/tamano)*tamano);
-            throw new Error(`${ip}/${prefijo} no es una dirección de red valida. `);
+            throw new Error(`${ip}/${prefijo} no es una dirección de red válida. Usa ${correcta}/${prefijo}.`);
         }
         return n;
     }
@@ -125,34 +125,34 @@
     //FSLM para subredes del mismo tamaño
     //opciones subredes N o hostporsubred
 
-    function subnetearFLSM(ip, prefijo, opciones){
+    function subnetearFLSM(ip, prefijo, opciones = {}){
         const base = validarRedBase(ip, prefijo);
-        let bistPrestados;
+        const hostsSolicitados = opciones.hostPorSubred ?? opciones.hostsPorSubred;
+        let bitsPrestados;
 
-        if(opciones.subredes){
-            bistPrestados = Math.ceil(Math.log2(opciones.subredes));
-        }else if (opciones.hostPorSubred){
-            const bitsHost = bitsParaHosts(opciones.hostPorSubred);
-            bistPrestados = 32 - prefijo - bitsHost;
+        if(Number.isInteger(opciones.subredes) && opciones.subredes > 0){
+            bitsPrestados = Math.ceil(Math.log2(opciones.subredes));
+        }else if (Number.isInteger(hostsSolicitados) && hostsSolicitados > 0){
+            const bitsHost = bitsParaHosts(hostsSolicitados);
+            bitsPrestados = 32 - prefijo - bitsHost;
         }else{
-            throw new Error('Indica el numero de subredes o de host por subred');
+            throw new Error('Indica un número entero válido de subredes o de hosts por subred');
         }
-        const nuevoPrefijo = prefijo + bistPrestados;
-        if(bistPrestados < 0 || nuevoPrefijo > 30){
-            throw new Error(`No caben: harían falta /${nuevoPrefijo}, fuera del rango /${prefijo}-/30`);
+        const nuevoPrefijo = prefijo + bitsPrestados;
+        if(bitsPrestados < 0 || nuevoPrefijo > 30){
+            throw new Error(`No caben: haría falta /${nuevoPrefijo}, fuera del rango /${prefijo}-/30`);
         }
 
-        const total = 2**bistPrestados;
+        const total = 2**bitsPrestados;
         const tamano = 2**(32-nuevoPrefijo);
         const subredes = [];
 
         for(let i = 0; i < total; i++){
             subredes.push(describirSubred(base + i*tamano, nuevoPrefijo, `Subred ${i+1}`));
         }
-        return { bistPrestados, nuevoPrefijo, totalSubredes : total, hostPorSubred: hostsUtilizable(nuevoPrefijo), subredes }
-
+        const hostsPorSubred = hostsUtilizable(nuevoPrefijo);
+        return { bitsPrestados, nuevoPrefijo, totalSubredes: total, hostsPorSubred, hostPorSubred: hostsPorSubred, subredes };
     }
-
     //funcion para n bits de host tales que 2^n - 2 >= host
     function bitsParaHosts(hosts){
         if(!Number.isInteger(hosts) || hosts < 1) throw new Error(`${hosts} no es un numero de hosts valido`);
@@ -163,35 +163,6 @@
 
     //cuando nos den requermientos nombre y los hosts de las subredes
     function subnetearVLSM(ip, prefijo, requerimientos){
-        const base = validarRedBase(ip, prefijo);
-        const fin = base + 2**(32-prefijo);
-        //ordenamos
-        const oredenados = requerimientos
-        .map((r, i)=>{({...r, i})})
-        .sort((a,b) => n.hosts - a.hosts || a.i - b.i);
-
-        let siguiente = base;
-        const subredes = oredenados.map((r)=>{
-            const bitsHosts = bitsParaHosts(r.hosts);
-            const nuevoPrefijo = 32 - bitsHosts;
-            if(nuevoPrefijo < prefijo){
-                throw new Error(`${nombre} (${r.hosts} hosts) necesita /${nuevoPrefijo}, mas grande que toda la red `);
-            }
-            siguiente = inicio + tamano;
-            return { ...describirSubred(inicio, nuevoPrefijo, r.nombre), hostsSolicitados: r.hosts, bitsHosts };
-        });
-
-        const usadas = siguiente - base;
-        return{
-            direccionesTotales : 2**(32-prefijo),
-            direccionesUsadas : usadas,
-            primerLibre : siguiente < fin ? enteroAIp(siguiente):null
-        };
-    }
-
-
-    // Implementación VLSM completa; se conserva la función inicial como referencia.
-    function subnetearVLSMCompleto(ip, prefijo, requerimientos){
         const base = validarRedBase(ip, prefijo);
         const fin = base + 2**(32-prefijo);
         if(!Array.isArray(requerimientos) || requerimientos.length === 0){
@@ -217,9 +188,7 @@
             }
 
             siguiente = inicio + tamano;
-            const subred = describirSubred(inicio, nuevoPrefijo, r.nombre);
-            subred.broadcast = enteroAIp(inicio + tamano - 1);
-            return {...subred, hostsSolicitados: r.hosts, bitsHosts};
+            return { ...describirSubred(inicio, nuevoPrefijo, r.nombre), hostsSolicitados: r.hosts, bitsHosts };
         });
 
         const usadas = siguiente - base;
@@ -232,7 +201,7 @@
         };
     }
     const api = {
-        octetoABinario, pasosDecimalABinario, ipABinario, ipAEntero, enteroAIp, prefijoAMascara, mascaraAPrefijo, leerPrefijo, claseDeRed, esPrivada, hostsUtilizable, bitsParaHosts, analizarIp, subnetearFLSM, subnetearVLSM: subnetearVLSMCompleto
+        octetoABinario, pasosDecimalABinario, ipABinario, ipAEntero, enteroAIp, prefijoAMascara, mascaraAPrefijo, leerPrefijo, claseDeRed, esPrivada, hostsUtilizable, bitsParaHosts, analizarIp, subnetearFLSM, subnetearVLSM
     };
 
     //este ultimo es hacer este script como modulo o libreria propia
@@ -240,3 +209,7 @@
     else global.Subneteo = api;
     
 })(typeof window !== 'undefined' ? window:globalThis)    
+
+
+
+

@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ejemplo de Subneto</title>
+    <title>Calculadora de Subneteo IPv4</title>
     <link rel="stylesheet" href="./css/style.css">
 </head>
 <body>
@@ -13,7 +13,7 @@
     </header>
     <nav class="pestanas" role="tablist" >
         <button class="pestana activa" data-panel="panel-binario" role="tab"  >Decimal -- Binario</button>
-        <button class="pestana" data-panel="panel-flsm" role="tab"  >DFLSM (subredes iguales)</button>
+        <button class="pestana" data-panel="panel-flsm" role="tab"  >FLSM (subredes iguales)</button>
         <button class="pestana" data-panel="panel-vlsm" role="tab"  >VLSM (a la medida)</button>
         <button class="pestana" data-panel="panel-ip" role="tab"  >¿A que red pertenece?</button>
     </nav>
@@ -21,8 +21,8 @@
     <main>
         <section id="panel-binario" class="panel activo" >
             <h2>Convertir un octeto o una IP a Binario</h2>
-            <form id="bin-entrada" class="formulario">
-                <label for="">Numero (0 - 255) o IP Completa</label>
+            <form id="form-binario" class="formulario">
+                <label for="bin-entrada">Número (0 - 255) o IP completa</label>
                 <input type="text"  id="bin-entrada" value="192.168.50.0" autocomplete="off">
                 <button type="submit" >Convertir</button>
             </form>
@@ -35,23 +35,23 @@
                 <label>Prefijo o máscara</label>
                 <input type="text"  id="flsm-prefijo" value="/8" autocomplete="off">
                 <label>Red base</label>
-                <input type="text"  id="flsm-red" value="10.0.0.1" autocomplete="off">
+                <input type="text"  id="flsm-red" value="10.0.0.0" autocomplete="off">
                 <label>Calcular por:
                     <select id="flsm-modo">
                         <option value="subredes">Número de Subredes</option>
-                        <option value="hostsPorSubred">Host por subred</option>
+                        <option value="hostPorSubred">Host por subred</option>
                     </select>
                 </label>
                 <label>Cantidad
                     <input type="number" min="1" value="16" id="flsm-cantidad">
                 </label>
-                <button type="submit" >Subnetear</button>
+                <button type="submit">Subnetear</button>
             </form>
             <div id="flsm-resultado" ></div>
         </section>
 
         <section id="panel-vlsm" class="panel" >
-            <h2>Ajustar a cada area el bloque justo a lo que neceste</h2>
+            <h2>Ajustar cada subred a la cantidad de hosts que necesita</h2>
             <form id="form-vlsm"  class="formulario" >
                 <label>Prefijo o máscara</label>
                 <input type="text"  id="vlsm-prefijo" value="/24" autocomplete="off">
@@ -61,34 +61,40 @@
                     <div class="req-titulo" >
                         <span>Área/subred</span><span>Hosts</span>
                     </div>
-                    <div class="vlsm-filas" >
+                    <div id="vlsm-filas" class="vlsm-filas">
 
                     </div>
-                    <button type="button" id="vlsn-agregar" class="secundario" >Agregar Subred</button>
+                    <button type="button" id="vlsm-agregar" class="secundario">Agregar Subred</button>
 
                 </div>
-                <button type="submit" >Subnetear</button>
+                <button type="submit">Subnetear</button>
+                <button type="button" data-ejemplo="0">Borrar Todo</button>
             </form>
             <div id="vlsm-resultado" ></div>
         </section>
 
-        <section id="panel-ip" class=panel >
-            <h2>Encontrar la red, el rando y el broadcast de una IP</h2>
+        <section id="panel-ip" class="panel" >
+            <h2>Encontrar la red, el rango y el broadcast de una IP</h2>
             <form id="form-ip" class="formulario">
-                <label>Direccion IP 
+                <label>Dirección IP 
                     <input type="text" id="ip-dir" value="10.28.90.92" autocomplete="off">
                 </label>
-                <label> Prefijo o Máscara
-                    <input type="text" id="ip-prefijo" value="/12" a>
+                <label> Prefijo o máscara
+                    <input type="text" id="ip-prefijo" value="/12" autocomplete="off">
                 </label>
                 <button type="submit" >Analizar</button>
             </form>
-            <div id="ip-resultdo" ></div>
+            <div id="ip-resultado" ></div>
         </section>
-    </main>
+</main>
 
       <script src="./js/subneteo.js"></script>
   <script src="./js/app.js"></script>
     
 </body>
 </html>
+
+
+
+
+
