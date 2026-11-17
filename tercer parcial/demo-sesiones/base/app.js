@@ -1,5 +1,4 @@
 // La aplicación de la demo. server.js la arranca; las pruebas la arrancan con otras configuraciones.
-// Lo que dice "(en clase)" lo programamos juntos, paso por paso. Mientras no esté, esa ruta responde 501.
 const path = require('path');
 const express = require('express');
 const session = require('express-session');
@@ -42,7 +41,7 @@ function crearApp(config, pool){
       saveUninitialized : false, //no crea la sesion ni la cookie
       rolling : config.rolling,
       cookie : {
-        maxAge: config.maxAge || 1000*60*60*24,
+        maxAge: config.maxAgeMs || 1000 * 60 * 60 * 24,
         httpOnly: config.httpOnly,
         sameSite : config.sameSite,
         secure : false //activar el https
@@ -55,18 +54,12 @@ function crearApp(config, pool){
 
   //en el uso de middleware como existe el intercambio de la sesion para tener un seguimiento del usuario, rol, privilegio, etc, se utiliza el atributo roling para poder extener su uso
 
-  function requiereSesion(req, res, next){
-    return pendiente(1)(req, res, next);
-  }
 
-  function requiereRol(rol){
-    return pendiente(3);
-  }
 
   //cuando estemos utilizando un middleware verificar la sesión actividad a partir ya sea de la consulta al servidor o la cookie
   function vencida(sesion){
     const desde = config.rolling ? sesion.ultimoUso : sesion.creada;
-    return Date.now() - desde > config.maxAge;
+    return Date.now() - desde > config.maxAgeMs;
   }
 
   //tenemos que identicar quien entro
@@ -98,7 +91,6 @@ function crearApp(config, pool){
 
   //vamos a generar un contador en la sesion, sirve para saver que la sesion existe antes de entrar
   app.post('/api/visita', (req, res) =>{
-    if(!req.session) return pendiente(1)(req, res);
     req.session.visitas = (req.session.visitas || 0)+1;
     res.json({visitas : req.session.visitas, sesion : idCorto(req.sessionID)});
   });
@@ -116,7 +108,7 @@ function crearApp(config, pool){
 
       //guardo la sesion
       const guardar = () =>{
-        req.session.datos = datos;
+        req.session.usuario = datos;
         req.session.visitas = visitas;
         req.session.creada = Date.now();
         req.session.ultimoUso = Date.now();
@@ -162,17 +154,17 @@ function crearApp(config, pool){
   });
 
   app.get('/api/admin/reporte', requiereSesion, requiereRol('admin'), (req, res)=>{
-    res.json({reporte : 'Talleres para administrador'});
+    res.json({ reporte: 'Talleres: 3 · Inscritos: 57 · Cupo libre: 18' });
   });
 
   //vamos a simular que el servidor guarda la sesion y la expone, en productivo jamas se expone
   app.get('/api/diagnostico/sesiones', async(req, res, next)=>{
     try{
       const sesiones = await todasLasSesiones(almacen);
-      const lista = Object.entries(sesiones || {}).map(([id], s) =>({
+      const lista = Object.entries(sesiones || {}).map(([id, s]) => ({
         sesion : idCorto(id),
-        esLaTuta : id === req.sessionID,
-        usuario : s.usuario ? s.usuario.usuario : '(sin iniciar sesion)',
+        esLaTuya: id === req.sessionID,
+        usuario : s.usuario ? s.usuario.usuario : '(sin iniciar sesión)',
         visitas: s.visitas || 0,
         expira: s.cookie && s.cookie.expires,
       }));
