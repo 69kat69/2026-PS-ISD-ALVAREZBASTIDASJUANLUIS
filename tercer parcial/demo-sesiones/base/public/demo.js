@@ -1,5 +1,7 @@
 // La página solo hace fetch a la API. El navegador manda la cookie solo (misma página, mismo servidor).
-const $ = (id) => document.getElementById(id);
+const $ = (selector) => document.querySelector(selector);
+
+window.addEventListener('load', () => {
 
 // Centralizo peticiones
 async function llamar(metodo, url, cuerpo) {
@@ -147,41 +149,50 @@ async function ejecutar(metodo, url, cuerpo) {
 
 // Presento la configuración activa para que las pruebas puedan relacionarla con sus resultados.
 async function iniciarDemo() {
+  const bloqueConfig = $('#config');
+
   try {
     const { status, datos } = await llamar('GET', '/api/config');
-    $('#config').textContent = status === 200
-      ? JSON.stringify(datos, null, 2)
-      : `Error HTTP ${status}`;
+    if (bloqueConfig) {
+      bloqueConfig.textContent = status === 200
+        ? JSON.stringify(datos, null, 2)
+        : `Error HTTP ${status}`;
+    }
   } catch {
-    $('#config').textContent = 'No se pudo conectar con el servidor';
+    if (bloqueConfig) bloqueConfig.textContent = 'No se pudo conectar con el servidor';
   }
 
   await refrescarTodo();
 }
 
 // Evito que el formulario recargue la página y envío sus valores como JSON.
-$('#form-login').addEventListener('submit', async (evento) => {
+document.addEventListener('submit', async (evento) => {
+  if (evento.target.id !== 'form-login') return;
+
   evento.preventDefault();
   await ejecutar('POST', '/api/login', {
-    usuario: $('#usuario').value,
-    contrasena: $('#contrasena').value,
+    usuario: evento.target.querySelector('#usuario').value,
+    contrasena: evento.target.querySelector('#contrasena').value,
   });
 });
 
 // Reutilizo los atributos data-* para conectar todos los botones con el mismo manejador.
-document.querySelectorAll('[data-metodo][data-url]').forEach((boton) => {
-  boton.addEventListener('click', () => {
-    ejecutar(boton.dataset.metodo, boton.dataset.url);
-  });
+document.addEventListener('click', (evento) => {
+  const botonApi = evento.target.closest('[data-metodo][data-url]');
+  if (botonApi) {
+    ejecutar(botonApi.dataset.metodo, botonApi.dataset.url);
+    return;
+  }
+
+  if (evento.target.closest('#btn-refrescar')) refrescarTodo();
+  if (evento.target.closest('#btn-sesiones')) actualizarTabla();
 });
 
 // Mantengo la contraseña de ejemplo sincronizada con el usuario seleccionado.
-$('#usuario').addEventListener('change', (evento) => {
-  $('#contrasena').value = `${evento.currentTarget.value}12345`;
+document.addEventListener('change', (evento) => {
+  if (evento.target.id !== 'usuario') return;
+  evento.target.form.querySelector('#contrasena').value = `${evento.target.value}12345`;
 });
 
-// Actualizo ambas tarjetas o solo la tabla según el botón que se use.
-$('#btn-refrescar').addEventListener('click', refrescarTodo);
-$('#btn-sesiones').addEventListener('click', actualizarTabla);
-
 iniciarDemo();
+});
